@@ -277,8 +277,10 @@ main{flex:1;display:flex;min-height:0;}
         <div>Aucun appel en cours.<br>Invitez un ami puis lancez un appel audio ou vidéo.</div>
       </div>
       <div id="call-controls" style="display:none">
-        <button class="round-btn" id="toggle-mic">🎙️</button>
+        <button class="round-btn active" id="toggle-mic">🎙️</button>
         <button class="round-btn" id="toggle-cam">🎥</button>
+        <button class="round-btn" id="toggle-mute">🔇</button>
+        <button class="round-btn active" id="toggle-speaker">🔊</button>
         <button class="round-btn hangup" id="hangup-btn">⏹️</button>
       </div>
     </div>
@@ -629,6 +631,30 @@ main{flex:1;display:flex;min-height:0;}
     $('toggle-cam').classList.toggle('active', camOn);
   });
 
+  let soundMuted = false;
+  $('toggle-mute').addEventListener('click', () => {
+    soundMuted = !soundMuted;
+    document.querySelectorAll('.video-tile video').forEach(v => { if (!v.muted || v.dataset.remote){ v.muted = soundMuted; } });
+    // Ne coupe que le son reçu (les vidéos distantes), jamais votre propre aperçu.
+    $('toggle-mute').classList.toggle('active', soundMuted);
+  });
+
+  let speakerOn = true;
+  $('toggle-speaker').addEventListener('click', async () => {
+    speakerOn = !speakerOn;
+    $('toggle-speaker').classList.toggle('active', speakerOn);
+    const videos = document.querySelectorAll('.video-tile video[data-remote]');
+    for (const v of videos){
+      try {
+        if (typeof v.setSinkId === 'function'){
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const target = devices.find(d => d.kind === 'audiooutput' && (speakerOn ? /speaker/i.test(d.label) : /earpiece|ear/i.test(d.label)));
+          if (target) await v.setSinkId(target.deviceId);
+        }
+      } catch(e){ /* Le changement de sortie audio n'est pas toujours possible sur mobile — le son continue de sortir normalement. */ }
+    }
+  });
+
   async function getLocalStream(withVideo){
     if (localStream) return localStream;
     localStream = await navigator.mediaDevices.getUserMedia({ audio:true, video: withVideo });
@@ -643,17 +669,17 @@ main{flex:1;display:flex;min-height:0;}
     }
     const stream = await getLocalStream(withVideo);
     connections.forEach((conn, peerId) => {
-      const call = myPeer.call(peerId, stream);
+      const call = myPeer.call(peerId, stream, { metadata: { video: withVideo } });
       registerCall(peerId, call);
     });
-    showCallUI();
+    if (!withVideo){ camOn = false; }
   }
 
   function answerCall(call){
-    getLocalStream(call.metadata && call.metadata.video).then((stream) => {
+    const wantsVideo = !!(call.metadata && call.metadata.video);
+    getLocalStream(wantsVideo).then((stream) => {
       call.answer(stream);
       registerCall(call.peer, call);
-      showCallUI();
     }).catch(() => {
       call.answer(); // pas de caméra/micro dispo : on répond sans flux
     });
@@ -676,7 +702,7 @@ main{flex:1;display:flex;min-height:0;}
     const video = document.createElement('video');
     video.autoplay = true;
     video.playsInline = true;
-    if (isMine) video.muted = true;
+    if (isMine) { video.muted = true; } else { video.setAttribute('data-remote', 'true'); }
     video.srcObject = stream;
     const tag = document.createElement('div');
     tag.className = 'name-tag';
@@ -702,6 +728,11 @@ main{flex:1;display:flex;min-height:0;}
     document.querySelectorAll('.video-tile').forEach(el => el.remove());
     $('call-controls').style.display = 'none';
     $('empty-call').style.display = 'flex';
+    micOn = true; camOn = true; soundMuted = false; speakerOn = true;
+    $('toggle-mic').classList.add('active');
+    $('toggle-cam').classList.remove('active');
+    $('toggle-mute').classList.remove('active');
+    $('toggle-speaker').classList.add('active');
   }
 
 })();
