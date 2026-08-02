@@ -129,6 +129,45 @@ header.topbar{
   border:1px solid var(--line);padding:6px 10px;border-radius:20px;
 }
 
+#app-menu{
+  position:fixed;top:56px;right:14px;z-index:60;
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:6px;display:flex;flex-direction:column;min-width:220px;
+  box-shadow:0 12px 30px rgba(0,0,0,.4);
+}
+#app-menu button{
+  background:none;border:none;color:var(--text);text-align:left;
+  padding:11px 12px;border-radius:8px;font-size:14px;font-family:inherit;cursor:pointer;
+}
+#app-menu button:active{background:var(--surface-2);}
+
+/* Écran d'appel entrant */
+#incoming-call{
+  position:fixed;inset:0;z-index:70;background:rgba(5,7,11,.92);
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+  text-align:center;padding:24px;
+}
+#incoming-call .avatar-ring{
+  width:120px;height:120px;border-radius:50%;background:var(--surface-2);
+  border:2px solid var(--signal);display:flex;align-items:center;justify-content:center;
+  font-size:46px;animation:pulse-ring 1.4s ease-in-out infinite;
+}
+@keyframes pulse-ring{
+  0%,100%{box-shadow:0 0 0 0 rgba(52,209,189,.35);}
+  50%{box-shadow:0 0 0 18px rgba(52,209,189,0);}
+}
+#incoming-call h2{margin:0;font-size:20px;}
+#incoming-call p{margin:0;color:var(--text-dim);font-size:14px;}
+#incoming-actions{display:flex;gap:28px;margin-top:10px;}
+#incoming-actions .round-btn{width:64px;height:64px;font-size:26px;}
+
+/* Message vocal */
+.msg.voice audio{width:220px;height:38px;}
+#record-indicator{
+  display:none;align-items:center;gap:8px;color:var(--danger);font-size:13px;padding:0 6px;
+}
+#record-indicator .dot{width:9px;height:9px;border-radius:50%;background:var(--danger);animation:pulse-ring 1s ease-in-out infinite;}
+
 main{flex:1;display:flex;min-height:0;}
 #video-wrap{
   flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;
@@ -259,16 +298,26 @@ main{flex:1;display:flex;min-height:0;}
 <div id="app">
   <header class="topbar">
     <div class="topbar-left">
+      <button class="icon-btn" id="home-btn" title="Accueil">🏠</button>
       <span class="status-dot" id="status-dot"></span>
       <div>
         <h2 id="topbar-title">En attente de votre ami…</h2>
         <div class="sub" id="topbar-sub">Partagez votre lien pour commencer</div>
       </div>
     </div>
-    <div class="burn-badge" title="Les messages disparaissent après 1 heure">
-      🔥 <span id="burn-count">60:00</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="burn-badge" title="Les messages disparaissent après 1 heure">
+        🔥 <span id="burn-count">60:00</span>
+      </div>
+      <button class="icon-btn" id="menu-btn" title="Menu">☰</button>
     </div>
   </header>
+
+  <div id="app-menu" style="display:none">
+    <button id="menu-copy-link">🔗 Copier mon lien</button>
+    <button id="menu-about">ℹ️ À propos de Ligne Rouge</button>
+    <button id="menu-leave">🚪 Quitter le corridor</button>
+  </div>
 
   <main>
     <div id="video-wrap">
@@ -296,7 +345,9 @@ main{flex:1;display:flex;min-height:0;}
         <div id="composer">
           <input type="file" id="file-input" style="display:none">
           <button class="icon-btn" id="file-btn" title="Envoyer un fichier">📎</button>
+          <span id="record-indicator"><span class="dot"></span><span id="record-time">0:00</span></span>
           <input type="text" id="msg-input" placeholder="Écrire un message…">
+          <button class="icon-btn" id="voice-btn" title="Message vocal">🎤</button>
           <button class="icon-btn send" id="send-btn">➤</button>
         </div>
       </div>
@@ -317,6 +368,16 @@ main{flex:1;display:flex;min-height:0;}
       </div>
     </div>
   </main>
+</div>
+
+<div id="incoming-call">
+  <div class="avatar-ring">👤</div>
+  <h2 id="incoming-title">Votre ami vous appelle…</h2>
+  <p id="incoming-sub">Appel entrant</p>
+  <div id="incoming-actions">
+    <button class="round-btn hangup" id="decline-call-btn">✕</button>
+    <button class="round-btn active" id="accept-call-btn">📞</button>
+  </div>
 </div>
 
 <script>
@@ -375,14 +436,35 @@ main{flex:1;display:flex;min-height:0;}
     });
 
     myPeer.on('connection', (conn) => registerConnection(conn));
-    myPeer.on('call', (call) => {
-      addSystemMessage('Votre ami vous appelle…');
-      answerCall(call);
-    });
+    myPeer.on('call', (call) => showIncomingCall(call));
     myPeer.on('error', (err) => {
       console.error(err);
       addSystemMessage('Erreur de connexion : ' + err.type);
     });
+  }
+
+  /* ---------- Écran d'appel entrant (accepter / refuser) ---------- */
+  function showIncomingCall(call){
+    const wantsVideo = !!(call.metadata && call.metadata.video);
+    $('incoming-sub').textContent = wantsVideo ? 'Appel vidéo entrant' : 'Appel audio entrant';
+    $('incoming-call').style.display = 'flex';
+
+    const onAccept = () => {
+      cleanup();
+      answerCall(call);
+    };
+    const onDecline = () => {
+      cleanup();
+      try { call.close(); } catch(e){}
+      addSystemMessage('Appel refusé.');
+    };
+    function cleanup(){
+      $('incoming-call').style.display = 'none';
+      $('accept-call-btn').removeEventListener('click', onAccept);
+      $('decline-call-btn').removeEventListener('click', onDecline);
+    }
+    $('accept-call-btn').addEventListener('click', onAccept);
+    $('decline-call-btn').addEventListener('click', onDecline);
   }
 
   $('copy-btn').addEventListener('click', () => {
@@ -415,6 +497,40 @@ main{flex:1;display:flex;min-height:0;}
     $('app').style.display = 'flex';
     startBurnClock();
   }
+
+  /* ---------- Boutons Accueil et Menu ---------- */
+  $('home-btn').addEventListener('click', () => {
+    if (confirm('Retourner à l\'accueil ? Cela quittera la conversation en cours.')){
+      window.location.href = window.location.origin + window.location.pathname;
+    }
+  });
+
+  $('menu-btn').addEventListener('click', () => {
+    const menu = $('app-menu');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+  });
+  document.addEventListener('click', (e) => {
+    if (!$('app-menu').contains(e.target) && e.target.id !== 'menu-btn'){
+      $('app-menu').style.display = 'none';
+    }
+  });
+  $('menu-copy-link').addEventListener('click', () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', myId);
+    navigator.clipboard.writeText(url.toString());
+    $('app-menu').style.display = 'none';
+    addSystemMessage('Votre lien a été copié.');
+  });
+  $('menu-about').addEventListener('click', () => {
+    $('app-menu').style.display = 'none';
+    alert('Ligne Rouge : communication privée directe entre appareils. Aucun compte, aucune donnée conservée sur un serveur. Les messages disparaissent après 1 heure.');
+  });
+  $('menu-leave').addEventListener('click', () => {
+    $('app-menu').style.display = 'none';
+    if (confirm('Quitter le corridor et retourner à l\'accueil ?')){
+      window.location.href = window.location.origin + window.location.pathname;
+    }
+  });
 
   /* ---------- Connexions de données (chat + fichiers) ---------- */
   function connectToPeer(targetId){
@@ -509,16 +625,28 @@ main{flex:1;display:flex;min-height:0;}
         finalizeIncomingFile(pendingFile);
         pendingFile = null;
       }
+    } else if (data.kind === 'voice-meta'){
+      pendingVoice = { mime: data.mime, duration: data.duration, chunks: [] };
+    } else if (data.kind === 'voice-chunk'){
+      if (pendingVoice) pendingVoice.chunks.push(data.chunk);
+    } else if (data.kind === 'voice-end'){
+      if (pendingVoice){
+        finalizeIncomingVoice(pendingVoice);
+        pendingVoice = null;
+      }
     }
   }
   let pendingFile = null;
+  let pendingVoice = null;
 
-  function renderMessage({text, mine, ts, fileInfo}){
+  function renderMessage({text, mine, ts, fileInfo, audioInfo}){
     const wrap = document.createElement('div');
-    wrap.className = 'msg ' + (mine ? 'me' : 'them') + (fileInfo ? ' file' : '');
+    wrap.className = 'msg ' + (mine ? 'me' : 'them') + (fileInfo ? ' file' : '') + (audioInfo ? ' voice' : '');
     const time = new Date(ts).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
     if (fileInfo){
       wrap.innerHTML = '📎 <a href="' + fileInfo.url + '" download="' + fileInfo.name + '">' + fileInfo.name + '</a><span class="meta">' + time + '</span>';
+    } else if (audioInfo){
+      wrap.innerHTML = '🎤 <audio controls src="' + audioInfo.url + '"></audio><span class="meta">' + time + '</span>';
     } else {
       wrap.innerHTML = escapeHtml(text) + '<span class="meta">' + time + '</span>';
     }
@@ -614,6 +742,76 @@ main{flex:1;display:flex;min-height:0;}
     a.click();
     a.remove();
     renderMessage({ mine:false, ts:Date.now(), fileInfo:{ name: pf.name, url } });
+  }
+
+  function finalizeIncomingVoice(pv){
+    const blob = new Blob(pv.chunks, { type: pv.mime || 'audio/webm' });
+    const url = URL.createObjectURL(blob);
+    renderMessage({ mine:false, ts:Date.now(), audioInfo:{ url } });
+  }
+
+  /* ---------- Message vocal (enregistrement + envoi direct) ---------- */
+  let mediaRecorder = null;
+  let recordChunks = [];
+  let recordStart = null;
+  let recordTimerId = null;
+
+  $('voice-btn').addEventListener('click', async () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording'){
+      mediaRecorder.stop();
+      return;
+    }
+    if (connections.size === 0){
+      addSystemMessage('Invitez d\'abord un ami avant d\'envoyer un message vocal.');
+      return;
+    }
+    try {
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      recordChunks = [];
+      mediaRecorder = new MediaRecorder(micStream);
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        micStream.getTracks().forEach(t => t.stop());
+        clearInterval(recordTimerId);
+        $('record-indicator').style.display = 'none';
+        $('voice-btn').classList.remove('active');
+        const blob = new Blob(recordChunks, { type: 'audio/webm' });
+        if (blob.size > 0) sendVoiceMessage(blob);
+      };
+      mediaRecorder.start();
+      recordStart = Date.now();
+      $('record-indicator').style.display = 'flex';
+      $('voice-btn').classList.add('active');
+      recordTimerId = setInterval(() => {
+        const s = Math.floor((Date.now() - recordStart)/1000);
+        $('record-time').textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+      }, 500);
+    } catch(e){
+      addSystemMessage('Impossible d\'accéder au micro pour le message vocal.');
+    }
+  });
+
+  function sendVoiceMessage(blob){
+    const CHUNK = 16 * 1024;
+    connections.forEach((conn) => { if (conn.open) conn.send({ kind:'voice-meta', mime: blob.type }); });
+    const reader = new FileReader();
+    let offset = 0;
+    reader.onload = (e) => {
+      const chunk = e.target.result;
+      connections.forEach((conn) => { if (conn.open) conn.send({ kind:'voice-chunk', chunk }); });
+      offset += chunk.byteLength;
+      if (offset < blob.size){
+        readNext();
+      } else {
+        connections.forEach((conn) => { if (conn.open) conn.send({ kind:'voice-end' }); });
+        const url = URL.createObjectURL(blob);
+        renderMessage({ mine:true, ts:Date.now(), audioInfo:{ url } });
+      }
+    };
+    function readNext(){
+      reader.readAsArrayBuffer(blob.slice(offset, offset + CHUNK));
+    }
+    readNext();
   }
 
   /* ---------- Appels audio / vidéo ---------- */
