@@ -164,12 +164,37 @@ header.topbar{
 /* Message vocal */
 .msg.voice audio{width:220px;height:38px;}
 #record-indicator{
-  display:none;align-items:center;gap:8px;color:var(--danger);font-size:13px;padding:0 6px;
+  display:none;align-items:center;gap:8px;color:var(--danger);font-size:13px;
+  flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:20px;padding:0 8px 0 14px;height:44px;
 }
-#record-indicator .dot{width:9px;height:9px;border-radius:50%;background:var(--danger);animation:pulse-ring 1s ease-in-out infinite;}
+#record-indicator .dot{width:9px;height:9px;border-radius:50%;background:var(--danger);flex-shrink:0;animation:pulse-ring 1s ease-in-out infinite;}
+#record-indicator #record-time{flex:1;}
+#cancel-record-btn{
+  background:var(--surface);border:1px solid var(--line);color:var(--text);
+  width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;flex-shrink:0;
+}
+#msg-input.hidden-field, #file-btn.hidden-field{display:none;}
+
+/* Bannières publicitaires discrètes, intégrées au corridor */
+.ad-banner{
+  position:relative;margin:10px 12px 0;padding:8px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+  min-height:50px;overflow:hidden;
+}
+.ad-badge{
+  position:absolute;top:-9px;left:12px;background:var(--ember);color:#2B1400;
+  font-size:10px;font-weight:700;letter-spacing:.04em;padding:2px 10px;border-radius:20px;
+  z-index:1;
+}
+.ad-banner.ad-round{
+  width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  min-height:0;margin:0;flex-shrink:0;
+}
+.ad-banner.ad-round .ad-badge{top:-6px;left:50%;transform:translateX(-50%);font-size:8px;padding:1px 7px;}
 
 main{flex:1;display:flex;min-height:0;}
 #video-wrap{
+  position:relative;
   flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;
   padding:10px;overflow:auto;background:#05070B;
 }
@@ -288,7 +313,18 @@ main{flex:1;display:flex;min-height:0;}
         <button class="btn btn-primary btn-small" id="join-btn">Rejoindre</button>
       </div>
     </div>
-    <p class="hint" style="margin-top:20px;opacity:.7">
+    <div style="margin-top:20px;display:flex;justify-content:center">
+      <div id="chariow-widget" data-product-id="prd_goyv0p9o"
+          data-store-domain="bqbmvymx.mychariow.shop"
+          data-style="tap"
+          data-border-style="rounded"
+          data-cta-width="xs"
+          data-background-color="#FFFFFF"
+          data-cta-animation="none"
+          data-locale="fr"
+          data-primary-color="#ffcc00"></div>
+    </div>
+    <p class="hint" style="margin-top:14px;opacity:.7">
       Site conçu par Jérémie Ndoko — contact : +242 06 76 90 866
     </p>
   </div>
@@ -316,11 +352,20 @@ main{flex:1;display:flex;min-height:0;}
   <div id="app-menu" style="display:none">
     <button id="menu-copy-link">🔗 Copier mon lien</button>
     <button id="menu-about">ℹ️ À propos de Ligne Rouge</button>
+    <button id="menu-donate">💝 Faire un don</button>
     <button id="menu-leave">🚪 Quitter le corridor</button>
   </div>
 
   <main>
     <div id="video-wrap">
+      <div class="ad-banner ad-round" style="position:absolute; top:14px; right:14px; z-index:2;">
+        <span class="ad-badge">Pub</span>
+        <ins class="adsbygoogle"
+             style="display:inline-block; width:56px; height:56px"
+             data-ad-client="ca-pub-4814015189596960"
+             data-ad-slot="8381361430"
+             data-ad-format="auto"></ins>
+      </div>
       <div id="empty-call">
         <div class="ring2">📡</div>
         <div>Aucun appel en cours.<br>Invitez un ami puis lancez un appel audio ou vidéo.</div>
@@ -341,14 +386,25 @@ main{flex:1;display:flex;min-height:0;}
       </div>
 
       <div class="side-pane active" id="chat-pane">
+        <div class="ad-banner">
+          <span class="ad-badge">Pub</span>
+          <ins class="adsbygoogle"
+               style="display:block; width:100%; min-height:50px"
+               data-ad-client="ca-pub-4814015189596960"
+               data-ad-slot="8381361430"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+        </div>
         <div id="messages"></div>
         <div id="composer">
           <input type="file" id="file-input" style="display:none">
           <button class="icon-btn" id="file-btn" title="Envoyer un fichier">📎</button>
-          <span id="record-indicator"><span class="dot"></span><span id="record-time">0:00</span></span>
           <input type="text" id="msg-input" placeholder="Écrire un message…">
-          <button class="icon-btn" id="voice-btn" title="Message vocal">🎤</button>
-          <button class="icon-btn send" id="send-btn">➤</button>
+          <span id="record-indicator">
+            <span class="dot"></span><span id="record-time">0:00</span>
+            <button id="cancel-record-btn" title="Annuler">✕</button>
+          </span>
+          <button class="icon-btn send" id="mic-send-btn" title="Message vocal">🎤</button>
         </div>
       </div>
 
@@ -364,6 +420,15 @@ main{flex:1;display:flex;min-height:0;}
         </div>
         <div class="field">
           <button class="btn btn-outline" id="call-video-btn">🎥 Appel vidéo</button>
+        </div>
+        <div class="ad-banner" style="margin:24px 0 0">
+          <span class="ad-badge">Pub</span>
+          <ins class="adsbygoogle"
+               style="display:block; width:100%; min-height:50px"
+               data-ad-client="ca-pub-4814015189596960"
+               data-ad-slot="8381361430"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
         </div>
       </div>
     </div>
@@ -525,6 +590,10 @@ main{flex:1;display:flex;min-height:0;}
     $('app-menu').style.display = 'none';
     alert('Ligne Rouge : communication privée directe entre appareils. Aucun compte, aucune donnée conservée sur un serveur. Les messages disparaissent après 1 heure.');
   });
+  $('menu-donate').addEventListener('click', () => {
+    $('app-menu').style.display = 'none';
+    window.location.href = window.location.origin + window.location.pathname;
+  });
   $('menu-leave').addEventListener('click', () => {
     $('app-menu').style.display = 'none';
     if (confirm('Quitter le corridor et retourner à l\'accueil ?')){
@@ -596,9 +665,25 @@ main{flex:1;display:flex;min-height:0;}
     });
   });
 
-  /* ---------- Messagerie texte ---------- */
-  $('send-btn').addEventListener('click', sendTextMessage);
+  /* ---------- Messagerie texte + bouton dynamique micro/envoi ---------- */
+  function updateMicSendIcon(){
+    const hasText = $('msg-input').value.trim().length > 0;
+    $('mic-send-btn').textContent = hasText ? '➤' : '🎤';
+    $('mic-send-btn').title = hasText ? 'Envoyer' : 'Message vocal';
+  }
+  $('msg-input').addEventListener('input', updateMicSendIcon);
   $('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendTextMessage(); });
+
+  $('mic-send-btn').addEventListener('click', () => {
+    const hasText = $('msg-input').value.trim().length > 0;
+    if (mediaRecorder && mediaRecorder.state === 'recording'){
+      mediaRecorder.stop(); // arrête et envoie automatiquement
+    } else if (hasText){
+      sendTextMessage();
+    } else {
+      startVoiceRecording();
+    }
+  });
 
   function sendTextMessage(){
     const input = $('msg-input');
@@ -607,6 +692,7 @@ main{flex:1;display:flex;min-height:0;}
     broadcast({ kind: 'text', text, from: myId, ts: Date.now() });
     renderMessage({ text, mine: true, ts: Date.now() });
     input.value = '';
+    updateMicSendIcon();
   }
 
   function broadcast(payload){
@@ -750,17 +836,14 @@ main{flex:1;display:flex;min-height:0;}
     renderMessage({ mine:false, ts:Date.now(), audioInfo:{ url } });
   }
 
-  /* ---------- Message vocal (enregistrement + envoi direct) ---------- */
+  /* ---------- Message vocal (enregistrement + envoi via le bouton dynamique) ---------- */
   let mediaRecorder = null;
   let recordChunks = [];
   let recordStart = null;
   let recordTimerId = null;
+  let recordCancelled = false;
 
-  $('voice-btn').addEventListener('click', async () => {
-    if (mediaRecorder && mediaRecorder.state === 'recording'){
-      mediaRecorder.stop();
-      return;
-    }
+  async function startVoiceRecording(){
     if (connections.size === 0){
       addSystemMessage('Invitez d\'abord un ami avant d\'envoyer un message vocal.');
       return;
@@ -768,26 +851,41 @@ main{flex:1;display:flex;min-height:0;}
     try {
       const micStream = await navigator.mediaDevices.getUserMedia({ audio:true });
       recordChunks = [];
+      recordCancelled = false;
       mediaRecorder = new MediaRecorder(micStream);
       mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordChunks.push(e.data); };
       mediaRecorder.onstop = () => {
         micStream.getTracks().forEach(t => t.stop());
         clearInterval(recordTimerId);
         $('record-indicator').style.display = 'none';
-        $('voice-btn').classList.remove('active');
-        const blob = new Blob(recordChunks, { type: 'audio/webm' });
-        if (blob.size > 0) sendVoiceMessage(blob);
+        $('file-btn').style.display = '';
+        $('msg-input').style.display = '';
+        updateMicSendIcon();
+        if (!recordCancelled){
+          const blob = new Blob(recordChunks, { type: 'audio/webm' });
+          if (blob.size > 0) sendVoiceMessage(blob);
+        }
       };
       mediaRecorder.start();
       recordStart = Date.now();
+      $('file-btn').style.display = 'none';
+      $('msg-input').style.display = 'none';
       $('record-indicator').style.display = 'flex';
-      $('voice-btn').classList.add('active');
+      $('mic-send-btn').textContent = '⏹️';
+      $('mic-send-btn').title = 'Arrêter et envoyer';
       recordTimerId = setInterval(() => {
         const s = Math.floor((Date.now() - recordStart)/1000);
         $('record-time').textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
       }, 500);
     } catch(e){
       addSystemMessage('Impossible d\'accéder au micro pour le message vocal.');
+    }
+  }
+
+  $('cancel-record-btn').addEventListener('click', () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording'){
+      recordCancelled = true;
+      mediaRecorder.stop();
     }
   });
 
@@ -933,6 +1031,20 @@ main{flex:1;display:flex;min-height:0;}
     $('toggle-speaker').classList.add('active');
   }
 
+})();
+</script>
+<!-- Chariow Widget (don) -->
+<script>
+(function() {
+  var script = document.createElement('script');
+  script.src = 'https://js.chariowcdn.com/v1/widget.min.js';
+  script.async = true;
+  document.head.appendChild(script);
+
+  var link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://js.chariowcdn.com/v1/widget.min.css';
+  document.head.appendChild(link);
 })();
 </script>
 </body>
